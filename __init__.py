@@ -1,5 +1,6 @@
-from flask import Flask, render_template, flash, url_for, redirect, request, session
+from flask import Flask, render_template, flash, url_for, redirect, request, session, make_response
 from wtforms import Form, BooleanField, TextField, PasswordField, validators
+from datetime import datetime, timedelta
 from passlib.hash import sha256_crypt
 from MySQLdb import escape_string as thwart
 import gc
@@ -24,33 +25,33 @@ def login_required(f):
 
 @app.route("/", methods=["GET", "POST"])
 def main():
-    
+
     error = "" #this is just an empty placeholder (sentinal value)
 
     try:
         c, conn = connection()
         if request.method == "POST":
             data = c.execute("SELECT * FROM users WHERE username = ('{0}')".format(thwart(request.form['username'])))
-            
+
             data = c.fetchone()[2]
-            
+
             if sha256_crypt.verify(request.form['password'], data):
                 session['logged_in'] = True
                 session['username'] = request.form['username']
-                
+
                 flash("You are now logged in")
-                
+
                 return redirect(url_for("dashboard"))
             else:
                 error = "Invalid credentials, try again."
-            
+
             gc.collect()
-            return render_template("main.html", error = error)    
-        
+            return render_template("main.html", error = error)
+
     except Exception as e:
         flash(e) # delete upon release! For debugging purposes only!!
         return render_template("main.html", error = error)
-    
+
     return render_template("main.html")
 
 @app.route("/dashboard/", methods=["GET", "POST"])
@@ -60,37 +61,48 @@ def dashboard():
         return render_template("dashboard.html", APP_CONTENT = APP_CONTENT)
     except Exception as e:
         return render_template("500.html", error = e)
+
+@app.route("/introduction-to-app/")
+@login_required
+def templating():
+    try:
+        output = ["DIGIT 400 is good", "Python, Java, php, SQL, C++", "<p><strong>Hello World!</strong></p>", 42, "42"]
+        
+        return render_template("templating_demo.html", output = output)
+    
+    except Exception as e:
+        return(str(e)) # delete upon release! For debugging purposes only!!
     
 @app.route("/login/", methods=["GET", "POST"])
 def login():
-    
+
     error = "" #this is just an empty placeholder (sentinal value)
 
     try:
         c, conn = connection()
         if request.method == "POST":
             data = c.execute("SELECT * FROM users WHERE username = ('{0}')".format(thwart(request.form['username'])))
-            
+
             data = c.fetchone()[2]
-            
+
             if sha256_crypt.verify(request.form['password'], data):
                 session['logged_in'] = True
                 session['username'] = request.form['username']
-                
+
                 flash("You are now logged in")
-                
+
                 return redirect(url_for("dashboard"))
             else:
                 error = "Invalid credentials, try again."
-            
+
             gc.collect()
             return render_template("login.html", error = error)
-            
-        
+
+
     except Exception as e:
         flash(e) # delete upon release! For debugging purposes only!!
         return render_template("login.html", error = error)
-    
+
     return render_template("login.html")
 
 @app.route("/logout/")
@@ -108,44 +120,71 @@ class RegistrationForm(Form):
                                              validators.EqualTo("confirm", message="Password must match")])
     confirm = PasswordField("Repeat Password")
     accept_tos = BooleanField("I accept the Terms of Service and Privacy Notice", [validators.Required()])
-    
+
 
 @app.route("/register/", methods=["GET", "POST"])
 def register_page():
     try:
         form = RegistrationForm(request.form)
-        
+
         if request.method == "POST" and form.validate():
             username = form.username.data
             email = form.email.data
             password = sha256_crypt.encrypt((str(form.password.data)))
-            
+
             c, conn = connection()
-            
+
             x = c.execute("SELECT * FROM users WHERE username= ('{0}')".format((thwart(username))))
-            
-            if int(x) > 0: 
+
+            if int(x) > 0:
                 flash("That username is already taken, please choose another")
                 return render_template("register.html", form = form)
             else:
                 c.execute("INSERT INTO users(username, password, email, tracking) VALUES ('{0}','{1}','{2}','{3}')".format(thwart(username),thwart(password),thwart(email),thwart("/dashboard/")))
-            
+
             conn.commit()
             flash("Thanks for registering!")
             c.close()
             conn.close()
             gc.collect()
-            
+
             session['logged_in'] = True
             session['username'] = username
-            
-            return redirect(url_for("dashboard"))    
-            
+
+            return redirect(url_for("dashboard"))
+
         return render_template("register.html", form = form)
-        
+
     except Exception as e:
         return(str(e)) # For debugging purposes only!!
-    
+
+@app.route("/sitemap.xml/", methods=["GET"])
+def sitemap():
+    try:
+        pages = []
+        week = (datetime.now() - timedelta(days = 7)).date().isoformat()
+
+        for rule in app.url_map.iter_rules():
+            if "GET" in rule.methods and len(rule.arguments) == 0:
+                pages.append(
+                    ["http://165.227.68.146/"+str(rule.rule),week]
+                )
+
+        sitemap_xml = render_template("sitemap_template.xml", pages = pages)
+
+        response = make_response(sitemap_xml)
+
+        response.headers["Content-Type"] = "application/xml"
+
+        return response
+
+    except Exception as e:
+        return(str(e)) #For debugging purposes only!!
+
+@app.route("/robots.txt/")
+def robots():
+    return("User-agent:*\nDisallow: /register/\nDisallow: /login/") #Disallows some robot traffic
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html")
