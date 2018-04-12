@@ -1,3 +1,10 @@
+/* Google Fonts Mix-ins */
+
+@import url('https://fonts.googleapis.com/css?family=Lobster');
+
+@import url('https://fonts.googleapis.com/css?family=Ubuntu');
+
+/* Nav Bar Spacing for Logo */
 #mainlogo {
     max-width: 120px;
     margin-top: -7px;
@@ -6,3 +13,35 @@
 .button_space {
     margin-top: 2%;
 }
+
+/* Basic Font Styles */
+p {
+    font-family: 'Ubuntu', sans-serif;   
+}
+
+h1 {
+    font-family: 'Lobster', cursive;
+}
+
+/* Nav Bar Font Styles */
+.nav-link {
+    font-family: 'Ubuntu', sans-serif;
+    color: black;
+}
+
+.nav-link:hover {
+    color: coral;
+}
+
+
+body { 
+  background: url(../images/puppies.jpg) no-repeat center center fixed; 
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+}
+
+
+
+
