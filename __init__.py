@@ -220,23 +220,24 @@ def downloader():
     except Exception as e:
         return str(e)
 
-@app.route('/background_process/', methods=['GET', 'POST'])
+@app.route("/background_process/", methods=["GET","POST"])
 @login_required
 def background_process():
     try:
-        lang = request.args.get('proglang', 0, type=str)
+        lang = request.args.get("proglang", 0, type=str)
         if lang.lower() == 'python':
-            return jsonify(result="You are wise!")
+            return jsonify(result="You are wise.")
         else:
             return jsonify(result="Try again.")
+    
     except Exception as e:
-        return(str(e)) #remove for production
-
-@app.route('/jsonify/', methods=['GET', 'POST'])
+        return(str(e))
+    
+@app.route("/jsonify/", methods=["GET","POST"])
 @login_required
 def json_stuff():
     return render_template("jsonify.html")
-
+    
 @app.route("/sitemap.xml/", methods=["GET"])
 def sitemap():
     try:
